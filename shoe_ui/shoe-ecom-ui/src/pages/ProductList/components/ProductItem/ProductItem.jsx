@@ -4,7 +4,7 @@ import { formatCurrency } from '../../../../ultils/ultil'
 const IMAGE_BASE_URL = 'http://localhost:8080/api/images/view'
 
 export default function ProductItem({ product }) {
-  console.log('product : ', product)
+  // console.log('product : ', product)
   return (
     <Link to={`/product/${product.id}`}>
       <div

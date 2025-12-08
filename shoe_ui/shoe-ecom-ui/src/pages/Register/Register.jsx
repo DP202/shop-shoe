@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { schema } from '../../ultils/rules'
+import { registerSchema, schema } from '../../ultils/rules'
 import authApi from '../../apis/auth.api'
 import { toast } from 'react-toastify'
 
@@ -16,8 +16,8 @@ export default function Register() {
     setError,
     formState: { errors }
   } = useForm({
-    resolver: yupResolver(schema),
-    mode: 'onSubmit'
+    resolver: yupResolver(registerSchema)
+    // mode: 'onSubmit'
   })
 
   const registerMutation = useMutation({
@@ -25,15 +25,18 @@ export default function Register() {
   })
 
   const onSubmit = handleSubmit((data) => {
-    const formatDOB = {
-      ...data,
-      dob: data.dob ? new Date(data.dob).toISOString().split('T')[0] : null
-    }
-
-    registerMutation.mutate(formatDOB, {
+    console.log('FORM ĐÃ SUBMIT THÀNH CÔNG, DATA LÀ:', data)
+    registerMutation.mutate(data, {
       // eslint-disable-next-line no-unused-vars
       onSuccess: (response) => {
-        navigate('/login')
+        // navigate('/login')
+        console.log('Đăng ký thành công!', response) // ← Đây, giờ sẽ thấy log
+        toast.success('Đăng ký thành công! Đang chuyển đến trang đăng nhập...')
+
+        // Nếu muốn thấy log rõ hơn thì delay 1 giây rồi mới navigate
+        setTimeout(() => {
+          navigate('/login')
+        }, 1000)
       },
       onError: (error) => {
         if (error.response?.status === 400 || error.response?.status === 422) {
@@ -49,7 +52,7 @@ export default function Register() {
   })
 
   return (
-    <div className='bg-orange-600 min-h-screen'>
+    <div className='bg-blue-600 min-h-screen'>
       <div className='container mx-auto px-4'>
         <div className='grid grid-cols-1 lg:grid-cols-5 py-12 lg:py-20'>
           <div className='lg:col-span-2 lg:col-start-4'>
@@ -86,22 +89,22 @@ export default function Register() {
                 type='email'
                 errorMessage={errors.email?.message}
               />
-              <div className='flex gap-3'>
+              {/* <div className='flex gap-3'>
                 <Input name='firstName' register={register} placeholder='Họ' errorMessage={errors.firstName?.message} />
                 <Input name='lastName' register={register} placeholder='Tên' errorMessage={errors.lastName?.message} />
               </div>
-              <Input type='date' name='dob' register={register} errorMessage={errors.dob?.message} />
+              <Input type='date' name='dob' register={register} errorMessage={errors.dob?.message} /> */}
 
               <button
                 type='submit'
-                className='w-full mt-4 py-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded transition disabled:opacity-70 disabled:cursor-not-allowed'
+                className='cursor-pointer w-full mt-4 py-4 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded transition disabled:opacity-70 disabled:cursor-not-allowed'
               >
                 Đăng ký
               </button>
 
               <div className='mt-6 text-center'>
                 <span className='text-gray-600'>Đã có tài khoản? </span>
-                <Link to='/login' className='text-red-500 font-medium hover:underline'>
+                <Link to='/login' className='text-blue-500 font-medium hover:underline'>
                   Đăng nhập ngay
                 </Link>
               </div>

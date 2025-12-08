@@ -12,7 +12,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        orange: '#ee4d2d'
+        orange: '#ee4d2d',
+        dodgerblue: '#1E90FF'
       }
     }
   },
