@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import productApi from '../../apis/product.api'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import InputNumber from '../../components/InputNumber/InputNumber'
 import DOMPurify from 'dompurify'
 import { useEffect, useState } from 'react'
@@ -10,6 +10,7 @@ import { toast } from 'react-toastify'
 
 const IMAGE_BASE_URL = 'http://localhost:8080/api/images/view'
 export default function ProductDetail() {
+  const navigate = useNavigate()
   const { id } = useParams()
   const [previewImage, setPreviewImage] = useState(null)
   const [buyCount, setBuyCount] = useState(1)
@@ -113,6 +114,10 @@ export default function ProductDetail() {
         }
       }
     )
+  }
+
+  const handleByNow = () => {
+    navigate('/cart')
   }
 
   if (!product) return null
@@ -250,6 +255,7 @@ export default function ProductDetail() {
                   Thêm vào giỏ hàng
                 </button>
                 <button
+                  onClick={handleByNow}
                   className='cursor-pointer ml-4 flex h-12 min-w-[5rem] items-center justify-center
                 bg-blue-700 px-5 capitalize text-white shadow-sm outline-none hover:bg-blue-500
                 '

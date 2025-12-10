@@ -1,20 +1,98 @@
-import { useQuery } from '@tanstack/react-query'
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useMutation, useQuery } from '@tanstack/react-query'
 import cartApi from '../../apis/cart.api'
 import { Link } from 'react-router-dom'
 import QuantityController from '../../components/QuantityController/QuantityController'
 import { formatCurrency } from '../../ultils/ultil'
+import { useEffect, useState } from 'react'
 
 const IMAGE_BASE_URL = 'http://localhost:8080/api/images/view'
 
 export default function Cart() {
-  const { data: cartData } = useQuery({
+  const [extendedCart, setExtendedCart] = useState([])
+
+  const { data: cartData, refetch } = useQuery({
     queryKey: ['cart'],
     queryFn: () => cartApi.getAllCart()
   })
 
+  const updateCartMutation = useMutation({
+    mutationFn: (body) => cartApi.updateCartItem(body),
+    onSuccess: () => {
+      refetch()
+    },
+    onError: (error) => {
+      console.error('Update error:', error)
+      // refetch() // Dù lỗi cũng refetch để đồng bộ lại
+      // alert('Cập nhật thất bại!')
+    }
+  })
+
   const cart = cartData?.data?.data
-  console.log('Cart data : ', cart)
-  const totalPrice = cart?.total_price
+  // console.log('Cart data : ', cart)
+
+  const isCheckedAll = extendedCart.every((item) => item.checked)
+  console.log('extendedCart : ', extendedCart)
+
+  // vừa vào useQuery gọi api-> sau đó dùng useEffect set lại state
+  useEffect(() => {
+    setExtendedCart((prev) => {
+      const oldCheckedMap = Object.fromEntries(prev.map((item) => [item.id, item.checked]))
+
+      return (
+        cart?.cartItems?.map((item) => ({
+          ...item,
+          disabled: false,
+          checked: !!oldCheckedMap[item.id]
+        })) || []
+      )
+    })
+  }, [cart?.cartItems])
+
+  const handleChecked = (index, event) => {
+    const checked = event.target.checked
+    console.log(`[Cart] Index ${index} - checked = ${checked}`)
+    setExtendedCart((prev) =>
+      prev.map((item, i) => {
+        return i === index ? { ...item, checked: checked } : item
+      })
+    )
+  }
+
+  const hendleCheckAll = () => {
+    setExtendedCart((prev) =>
+      prev.map((item) => ({
+        ...item,
+        checked: !isCheckedAll
+      }))
+    )
+  }
+
+  const handleTypeQuantity = (cartIndex, value) => {
+    setExtendedCart((prev) => prev.map((item, i) => (i === cartIndex ? { ...item, quantity: value } : item)))
+  }
+
+  const handleQuantity = (cartIndex, newQuantity) => {
+    if (newQuantity < 1) return
+
+    const currentItem = extendedCart[cartIndex]
+    console.log('currentItem : ', currentItem)
+
+    if (!currentItem) return
+
+    if (newQuantity === currentItem.quantity) return // số lượng không thay đổi thì bỏ qua
+
+    setExtendedCart((prev) => {
+      return prev.map((item, i) => {
+        return i === cartIndex ? { ...item, disabled: true, quantity: newQuantity } : item
+      })
+    })
+
+    updateCartMutation.mutate({
+      sku: currentItem.productVariant.sku,
+      quantity: newQuantity
+    })
+  }
 
   return (
     <div className='bg-neutral-100 py-16'>
@@ -25,7 +103,7 @@ export default function Cart() {
               <div className='col-span-6 '>
                 <div className='flex items-center'>
                   <div className='flex flex-shrink-0 items-center justify-center pr-3'>
-                    <input type='checkbox' className='h-5 w-5' />
+                    <input type='checkbox' className='h-5 w-5' checked={isCheckedAll} onChange={hendleCheckAll} />
                   </div>
                   <div className='flex-grow text-black'>Sản phẩm</div>
                 </div>
@@ -42,7 +120,7 @@ export default function Cart() {
             </div>
 
             <div className='my-3 rounded-sm bg-white p-5 shadow'>
-              {cart?.cartItems.map((carts) => {
+              {extendedCart?.map((carts, index) => {
                 return (
                   <div
                     key={carts.id}
@@ -51,7 +129,12 @@ export default function Cart() {
                     <div className='col-span-6'>
                       <div className='flex'>
                         <div className='flex flex-shrink-0 items-center justify-center pr-3'>
-                          <input type='checkbox' className='h-5 w-5' />
+                          <input
+                            type='checkbox'
+                            className='h-5 w-5'
+                            checked={carts.checked}
+                            onChange={(e) => handleChecked(index, e)} // mỗi khi click cần biết index nó nằm vị trí nào
+                          />
                         </div>
 
                         <div className='flex-grow '>
@@ -74,10 +157,10 @@ export default function Cart() {
                     </div>
 
                     <div className='col-span-6 mt-5'>
-                      <div className='grid grid-cols-5 items-center text-center'>
+                      <div className='grid grid-cols-5 items-center'>
                         <div className='col-span-2'>
-                          <div className='flex items-center justify-center gap-3'>
-                            <span className='text-gray-400 line-through text-[15px]'>999999.000₫</span>
+                          <div className='flex items-center justify-center'>
+                            <span className='text-gray-400 line-through text-[15px]'>999.000₫</span>
                             <span className='text-gray-400  text-[15px]'>
                               {' '}
                               {formatCurrency(carts.productVariant.price)} ₫
@@ -86,11 +169,21 @@ export default function Cart() {
                         </div>
 
                         <div className='col-span-1'>
-                          <QuantityController max />
+                          <QuantityController
+                            max={carts.quantity}
+                            value={carts.quantity || 1}
+                            onIncrease={() => handleQuantity(index, carts.quantity + 1)}
+                            onDecrease={() => handleQuantity(index, carts.quantity - 1)}
+                            onType={(value) => handleTypeQuantity(index, value)}
+                            onFocusOut={(value) => handleQuantity(index, value)}
+                            disabled={carts.disabled}
+                          />
                         </div>
 
                         <div className='col-span-1'>
-                          <span className='text-orange-500 text-[17px]'>{totalPrice}</span>
+                          <span className='text-orange-500 text-[17px]'>
+                            {formatCurrency(carts.productVariant.price * carts.quantity)}
+                          </span>
                         </div>
 
                         <div className='col-span-1 cursor-pointer'>
@@ -114,7 +207,7 @@ export default function Cart() {
         >
           <div className='flex items-center'>
             <div className='flex items-center'>
-              <input type='checkbox' className='h-5 w-5 accent-orange' />
+              <input type='checkbox' className='h-5 w-5' checked={isCheckedAll} onChange={hendleCheckAll} />
               <button className='ml-3 text-gray-700'>Chọn tất cả ({cart?.cartItems.length})</button>
               <button className='mx-5 text-gray-600 hover:text-orange-500 transition'>Xóa</button>
             </div>

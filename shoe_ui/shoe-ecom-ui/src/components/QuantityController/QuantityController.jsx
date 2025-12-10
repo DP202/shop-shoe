@@ -1,6 +1,6 @@
 import InputNumber from '../InputNumber/InputNumber'
 
-export default function QuantityController({ onDecrease, max, onIncrease, onType, value, ...rest }) {
+export default function QuantityController({ onDecrease, onFocusOut, max, onIncrease, onType, value, ...rest }) {
   const handleChange = (e) => {
     let _value = Number(e.target.value)
     if (max !== undefined && _value > max) {
@@ -28,6 +28,10 @@ export default function QuantityController({ onDecrease, max, onIncrease, onType
     onDecrease && onDecrease(_value)
   }
 
+  const handleBlur = (e) => {
+    onFocusOut && onFocusOut(Number(e.target.value))
+  }
+
   return (
     <div className='ml-10 flex items-center'>
       <button
@@ -51,6 +55,7 @@ export default function QuantityController({ onDecrease, max, onIncrease, onType
         classNameError='hidden'
         classNameInput='h-8 w-14 border-t border-b border-gray-300 p-1 text-center outline-none'
         onChange={handleChange}
+        onBlur={handleBlur}
         {...rest}
       />
       <button
