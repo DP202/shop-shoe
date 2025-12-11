@@ -7,6 +7,7 @@ import { clearLocalStorage } from './auth.js'
 class Http {
   constructor() {
     this.accessToken = getAccessTokenLocalStorage()
+
     console.log('Token khi khởi tạo Http:', this.accessToken ? 'Có token' : 'Không có token')
 
     this.instance = axios.create({
@@ -48,6 +49,8 @@ class Http {
       (error) => {
         if (error.response?.status === 401) {
           console.log('401 - Token hết hạn hoặc không hợp lệ')
+          clearLocalStorage()
+          // window.location.reload()
         }
         return Promise.reject(error)
       }

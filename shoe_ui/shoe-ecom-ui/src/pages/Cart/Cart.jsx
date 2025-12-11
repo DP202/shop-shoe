@@ -23,8 +23,21 @@ export default function Cart() {
     },
     onError: (error) => {
       console.error('Update error:', error)
-      // refetch() // Dù lỗi cũng refetch để đồng bộ lại
-      // alert('Cập nhật thất bại!')
+      refetch()
+    }
+  })
+
+  const deleteCartMutation = useMutation({
+    mutationFn: (cartItemIds) => cartApi.removeCart(cartItemIds),
+    onSuccess: () => {
+      refetch()
+    }
+  })
+
+  const buyCartMutation = useMutation({
+    mutationFn: (body) => cartApi.buyCart(body),
+    onSuccess: () => {
+      refetch()
     }
   })
 
@@ -34,8 +47,19 @@ export default function Cart() {
   const isCheckedAll = extendedCart.every((item) => item.checked)
   console.log('extendedCart : ', extendedCart)
 
+  //
+  const checkedCount = extendedCart.filter((item) => item.checked).length
+  const totalCheckedCartPrice = extendedCart
+    .filter((item) => item.checked)
+    .map((item) => item.productVariant.price * item.quantity)
+    .reduce((a, b) => a + b, 0)
+
   // vừa vào useQuery gọi api-> sau đó dùng useEffect set lại state
   useEffect(() => {
+    if (!cart?.cartItems) {
+      setExtendedCart([])
+      return
+    }
     setExtendedCart((prev) => {
       const oldCheckedMap = Object.fromEntries(prev.map((item) => [item.id, item.checked]))
 
@@ -91,6 +115,51 @@ export default function Cart() {
     updateCartMutation.mutate({
       sku: currentItem.productVariant.sku,
       quantity: newQuantity
+    })
+  }
+
+  const handleDeleteItem = (cartIndex) => {
+    const cartItemId = extendedCart[cartIndex].id
+    deleteCartMutation.mutate(cartItemId)
+  }
+
+  const handleDeleteSelected = () => {
+    // lấy item đang checked => lấy id của chúng
+    const selectedIds = extendedCart.filter((item) => item.checked).map((item) => item.id)
+    if (selectedIds.length === 0) return
+    deleteCartMutation.mutate(selectedIds)
+  }
+
+  const handleBuyCart = () => {
+    if (checkedCount === 0) {
+      alert('Vui lòng chọn ít nhất 1 sản phẩm để mua')
+      return
+    }
+
+    const checkedItems = extendedCart.filter((item) => item.checked)
+
+    // SỬA CHÍNH TẠI ĐÂY: bọc trong orderItemRequests
+    const body = {
+      orderItemRequests: checkedItems.map((item) => ({
+        productVariantId: item.productVariant.id, // chắc chắn là id (UUID), không phải sku
+        quantity: item.quantity
+      })),
+      // Nếu backend bắt buộc phải có type, thì thêm vào:
+      type: 'CASH_ON_DELIVERY' // hoặc giá trị mặc định phù hợp
+    }
+
+    console.log('Body gửi đi:', body) // Thêm log để kiểm tra
+
+    buyCartMutation.mutate(body, {
+      onSuccess: (res) => {
+        console.log('Đặt hàng thành công:', res.data)
+        alert('Đặt hàng thành công!')
+        // refetch() sẽ tự chạy
+      },
+      onError: (err) => {
+        console.error('Lỗi đặt hàng:', err)
+        alert('Đặt hàng thất bại. Vui lòng thử lại!')
+      }
     })
   }
 
@@ -187,7 +256,10 @@ export default function Cart() {
                         </div>
 
                         <div className='col-span-1 cursor-pointer'>
-                          <button className='text-black transition-colors hover:text-orange-500 cursor-pointer'>
+                          <button
+                            onClick={() => handleDeleteItem(index)}
+                            className='text-black transition-colors hover:text-orange-500 cursor-pointer'
+                          >
                             Xóa
                           </button>
                         </div>
@@ -209,23 +281,31 @@ export default function Cart() {
             <div className='flex items-center'>
               <input type='checkbox' className='h-5 w-5' checked={isCheckedAll} onChange={hendleCheckAll} />
               <button className='ml-3 text-gray-700'>Chọn tất cả ({cart?.cartItems.length})</button>
-              <button className='mx-5 text-gray-600 hover:text-orange-500 transition'>Xóa</button>
+              <button
+                className='mx-5 text-gray-600 hover:text-orange-500 transition'
+                onClick={() => handleDeleteSelected()}
+              >
+                Xóa
+              </button>
             </div>
           </div>
 
           <div className='ml-auto flex items-center'>
             <div className='text-right'>
               <div className='flex items-center justify-end'>
-                <span className='text-gray-600'>Tổng thanh toán (0 sản phẩm):</span>
-                <span className='ml-4 text-2xl text-orange-500'>789876</span>
+                <span className='text-gray-600'>Tổng thanh toán ({checkedCount} sản phẩm):</span>
+                <span className='ml-4 text-2xl text-orange-500'>₫{formatCurrency(totalCheckedCartPrice)}</span>
               </div>
-              <div className='mt-1 text-sm'>
+              {/* <div className='mt-1 text-sm'>
                 <span className='text-gray-500'>Tiết kiệm</span>
                 <span className='ml-4 text-orange-500'>đ111</span>
-              </div>
+              </div> */}
             </div>
 
-            <button className='ml-8 rounded-sm bg-orange-500 px-10 py-3 text-white hover:bg-orange-600 transition uppercase font-medium'>
+            <button
+              onClick={handleBuyCart}
+              className='ml-8 rounded-sm bg-orange-500 px-10 py-3 text-white hover:bg-orange-600 transition uppercase font-medium'
+            >
               Mua hàng
             </button>
           </div>

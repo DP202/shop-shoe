@@ -9,7 +9,8 @@ import { AppProvider } from './context/app.context.jsx'
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false
+      refetchOnWindowFocus: false,
+      retry: 0
     }
   }
 })
